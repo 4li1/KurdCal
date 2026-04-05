@@ -154,4 +154,21 @@ class AppTheme {
       ),
     );
   }
+
+  /// Generates a Kurdish-inspired [ThemeData] seeded from [primaryColor].
+  /// Preserves the Kurdish design language (typography, surface colours)
+  /// while swapping the primary accent to the user's chosen colour.
+  static ThemeData fromSeed(Color primaryColor, {bool dark = true}) {
+    final base = dark ? darkTheme : lightTheme;
+    final scheme = ColorScheme.fromSeed(
+      seedColor: primaryColor,
+      brightness: dark ? Brightness.dark : Brightness.light,
+    ).copyWith(
+      // Keep Kurdish gold as the consistent secondary accent.
+      secondary: AppColors.sunGold,
+      // Preserve the hand-crafted Kurdish surface/background palette.
+      surface: dark ? AppColors.charcoalSurface : AppColors.creamSurface,
+    );
+    return base.copyWith(colorScheme: scheme);
+  }
 }

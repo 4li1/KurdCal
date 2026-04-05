@@ -10,3 +10,4 @@ Future<void> scheduleOnThisDayNotifications({
   List<CalendarEvent>? events,
 }) async {}
 Future<void> savePrefs(NotificationPrefs prefs) async {}
+Future<NotificationPrefs> loadPrefs() async => const NotificationPrefs();

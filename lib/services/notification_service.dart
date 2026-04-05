@@ -39,6 +39,11 @@ class NotificationService {
     await _impl.savePrefs(prefs);
   }
 
+  Future<NotificationPrefs> loadPrefs() async {
+    if (kIsWeb) return const NotificationPrefs();
+    return _impl.loadPrefs();
+  }
+
   // Seed events are kept public so screens can reference them without a DB.
   static final seedEventsForDemo = <CalendarEvent>[
     const CalendarEvent(

@@ -144,6 +144,10 @@ Future<void> savePrefs(NotificationPrefs prefs) async {
   ]);
 }
 
+Future<NotificationPrefs> loadPrefs() async {
+  return _getPrefs();
+}
+
 Future<NotificationPrefs> _getPrefs() async {
   final sp = await SharedPreferences.getInstance();
   return NotificationPrefs(

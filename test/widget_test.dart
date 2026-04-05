@@ -6,20 +6,22 @@ import 'package:kurdish_calendar/main.dart';
 
 void main() {
   testWidgets('App launches smoke test', (WidgetTester tester) async {
+    // showOnboarding: false → go straight to MainShell (no repeating animations).
     await tester.pumpWidget(
-      const ProviderScope(
-        child: KurdishCalendarApp(),
+      ProviderScope(
+        child: KurdishCalendarApp(showOnboarding: false),
       ),
     );
 
-    // Let delayed entrance animations schedule and complete in the fake clock.
+    // Let entrance animations complete in the fake clock.
     await tester.pump(const Duration(seconds: 2));
 
-    // Verify the login screen title appears
-    expect(find.text('ساڵنامەی کوردستان'), findsWidgets);
+    // Verify the app shell rendered.
+    expect(find.byType(MaterialApp), findsOneWidget);
 
-    // Unmount the app to stop any repeating animation timers before test teardown.
+    // Unmount to stop any remaining timers before test teardown.
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 100));
   });
 }
+

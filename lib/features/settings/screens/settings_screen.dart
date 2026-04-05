@@ -19,6 +19,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   CalendarSystem _defaultCalendar = CalendarSystem.kurdish;
 
   @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await NotificationService.instance.loadPrefs();
+    if (!mounted) return;
+    setState(() => _prefs = prefs);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -170,8 +182,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       _NotifToggle(
                         icon: '✦',
                         iconColor: AppColors.sunGoldDeep,
-                        labelKu: 'دیکەی مێژوو',
-                        labelEn: 'Milestones',
+                        labelKu: 'ئەدیبان و شاعیرانە',
+                        labelEn: 'Poets & Writers',
                         value: _prefs.milestones,
                         accentColor: AppColors.sunGoldDeep,
                         isDark: isDark,
