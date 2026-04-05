@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/kurdish_painters.dart';
+import '../../../core/theme/kurdish_theme_extension.dart';
 import '../../../core/constants/kurdish_months.dart';
 import '../../../core/utils/calendar_converter.dart';
 import '../../../data/models/calendar_event.dart';
@@ -58,6 +59,19 @@ class _CalendarHeader extends ConsumerWidget {
     final displayedMonth = ref.watch(displayedMonthProvider);
     final calSystem = ref.watch(calendarSystemProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<KurdishThemeExtension>();
+    final headerStart = Color.lerp(
+      scheme.primary,
+      isDark ? AppColors.charcoalBg : Colors.white,
+      isDark ? 0.25 : 0.15,
+    )!;
+    final headerEnd = Color.lerp(
+      scheme.primary,
+      isDark ? Colors.black : AppColors.forestGreen,
+      isDark ? 0.55 : 0.25,
+    )!;
+    final titleColor = ext?.headerText ?? Colors.white;
 
     final kurdishDate = CalendarConverter.gregorianToKurdish(
       displayedMonth.year,
@@ -70,7 +84,7 @@ class _CalendarHeader extends ConsumerWidget {
       expandedHeight: 200,
       pinned: true,
       stretch: true,
-      backgroundColor: isDark ? AppColors.charcoalBg : AppColors.forestGreen,
+      backgroundColor: scheme.primary,
       flexibleSpace: FlexibleSpaceBar(
         stretchModes: const [
           StretchMode.zoomBackground,
@@ -82,9 +96,11 @@ class _CalendarHeader extends ConsumerWidget {
             // Gradient background
             Container(
               decoration: BoxDecoration(
-                gradient: isDark
-                    ? AppColors.headerGradientDark
-                    : AppColors.headerGradientLight,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [headerStart, headerEnd],
+                ),
               ),
             ),
             // Kilim pattern overlay
@@ -125,7 +141,7 @@ class _CalendarHeader extends ConsumerWidget {
                         Text(
                           _buildYearDisplay(calSystem, displayedMonth, kurdishDate),
                           style: AppTypography.textTheme.displayMedium!.copyWith(
-                            color: Colors.white,
+                            color: titleColor,
                             shadows: [
                               Shadow(
                                 color: Colors.black.withOpacity(0.3),
@@ -159,7 +175,7 @@ class _CalendarHeader extends ConsumerWidget {
                     Text(
                       _buildMonthDisplay(calSystem, displayedMonth, kurdishMonth),
                       style: AppTypography.textTheme.headlineMedium!.copyWith(
-                        color: Colors.white.withOpacity(0.9),
+                        color: (ext?.headerText ?? Colors.white).withOpacity(0.9),
                       ),
                     ),
                     // Navigation arrows
@@ -433,8 +449,13 @@ class _CalendarGrid extends ConsumerWidget {
     int startWeekday = firstDay.weekday;
     int offset = (startWeekday - 6 + 7) % 7;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).extension<KurdishThemeExtension>()?.surfaceColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
         switchInCurve: Curves.easeOut,
@@ -541,17 +562,19 @@ class _DayCellState extends State<_DayCell>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ext = Theme.of(context).extension<KurdishThemeExtension>();
+    final accent = ext?.primaryAccent ?? AppColors.sunGold;
 
     Color? bgColor;
     Color textColor = isDark ? Colors.white : AppColors.inkDark;
     bool hasRing = false;
 
     if (widget.isSelected) {
-      bgColor = AppColors.sunGold;
+      bgColor = accent;
       textColor = AppColors.inkDark;
     } else if (widget.isToday) {
       hasRing = true;
-      textColor = AppColors.sunGold;
+      textColor = accent;
     }
 
     final displayNum = _getDayLabel(widget.date, widget.calSystem, widget.day);
@@ -566,12 +589,12 @@ class _DayCellState extends State<_DayCell>
             color: bgColor,
             borderRadius: BorderRadius.circular(12),
             border: hasRing
-                ? Border.all(color: AppColors.sunGold, width: 2)
+                ? Border.all(color: accent, width: 2)
                 : null,
             boxShadow: widget.isSelected
                 ? [
                     BoxShadow(
-                      color: AppColors.sunGold.withOpacity(0.3),
+                      color: accent.withOpacity(0.35),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),

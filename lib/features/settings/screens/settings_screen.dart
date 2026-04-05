@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/kurdish_painters.dart';
+import '../../../core/theme/kurdish_theme_extension.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../data/models/calendar_event.dart';
+import '../../../data/models/onboarding_prefs.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/onboarding_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -15,6 +19,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   NotificationPrefs _prefs = const NotificationPrefs();
+  Set<CategoryOption> _selectedCategories = {};
   bool _useKurdishNumerals = true;
   CalendarSystem _defaultCalendar = CalendarSystem.kurdish;
 
@@ -25,14 +30,72 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _loadPrefs() async {
-    final prefs = await NotificationService.instance.loadPrefs();
+    final notifPrefs = await NotificationService.instance.loadPrefs();
+    final onboardingPrefs = await OnboardingService().loadPrefs();
+
+    final savedCategories = onboardingPrefs?.categories ?? <CategoryOption>{};
+    final categories = savedCategories.isNotEmpty
+        ? Set<CategoryOption>.from(savedCategories)
+        : _categoriesFromPrefs(notifPrefs);
+
+    debugPrint(
+      'Settings load -> selectedCategories=${categories.map((e) => e.name).toList()}',
+    );
+
+    final syncedPrefs = notifPrefs.copyWith(
+      enabled: notifPrefs.enabled && categories.isNotEmpty,
+      holidays: categories.contains(CategoryOption.holidays),
+      tragedies: categories.contains(CategoryOption.tragedies),
+      milestones: categories.contains(CategoryOption.poetic),
+      cultural: categories.contains(CategoryOption.cultural),
+    );
+
     if (!mounted) return;
-    setState(() => _prefs = prefs);
+    setState(() {
+      _selectedCategories = categories;
+      _prefs = syncedPrefs;
+    });
+  }
+
+  Set<CategoryOption> _categoriesFromPrefs(NotificationPrefs prefs) {
+    final result = <CategoryOption>{};
+    if (prefs.holidays) result.add(CategoryOption.holidays);
+    if (prefs.tragedies) result.add(CategoryOption.tragedies);
+    if (prefs.milestones) result.add(CategoryOption.poetic);
+    if (prefs.cultural) result.add(CategoryOption.cultural);
+    return result;
+  }
+
+  NotificationPrefs _prefsFromCategories({
+    required Set<CategoryOption> categories,
+    required NotificationPrefs base,
+    bool? enabledOverride,
+  }) {
+    final hasAnyCategory = categories.isNotEmpty;
+    return base.copyWith(
+      enabled: (enabledOverride ?? base.enabled) && hasAnyCategory,
+      holidays: categories.contains(CategoryOption.holidays),
+      tragedies: categories.contains(CategoryOption.tragedies),
+      milestones: categories.contains(CategoryOption.poetic),
+      cultural: categories.contains(CategoryOption.cultural),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<KurdishThemeExtension>();
+    final headerStart = Color.lerp(
+      scheme.primary,
+      isDark ? AppColors.charcoalBg : Colors.white,
+      isDark ? 0.25 : 0.15,
+    )!;
+    final headerEnd = Color.lerp(
+      scheme.primary,
+      isDark ? Colors.black : AppColors.forestGreen,
+      isDark ? 0.55 : 0.25,
+    )!;
 
     return Scaffold(
       body: CustomScrollView(
@@ -40,16 +103,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SliverAppBar(
             expandedHeight: 120,
             pinned: true,
-            backgroundColor: isDark ? AppColors.charcoalBg : AppColors.forestGreen,
+            backgroundColor: scheme.primary,
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      gradient: isDark
-                          ? AppColors.headerGradientDark
-                          : AppColors.headerGradientLight,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [headerStart, headerEnd],
+                      ),
                     ),
                   ),
                   Positioned(
@@ -69,7 +134,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: Text(
               'ڕێکخستنەکان',
               style: AppTypography.textTheme.headlineMedium!
-                  .copyWith(color: Colors.white),
+                  .copyWith(color: ext?.headerText ?? Colors.white),
             ),
             centerTitle: false,
           ),
@@ -118,6 +183,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 20),
 
+                // ── Theme Section ────────────────────────────────────────
+                _SectionHeader(
+                  title: 'ڕووکار',
+                  subtitle: 'App Theme',
+                  icon: '✦',
+                  iconColor: AppColors.sunGold,
+                  isDark: isDark,
+                ),
+                _SettingsCard(
+                  isDark: isDark,
+                  children: AppThemeChoice.values.expand((choice) {
+                    final isLast = choice == AppThemeChoice.values.last;
+                    return [
+                      _ThemeOptionTile(
+                        choice: choice,
+                        selected: ref.watch(themeChoiceProvider) == choice,
+                        isDark: isDark,
+                        onTap: () => ref
+                            .read(themeChoiceProvider.notifier)
+                            .setTheme(choice),
+                      ),
+                      if (!isLast) _Divider(isDark: isDark),
+                    ];
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+
                 // ── Notification Section ────────────────────────────────
                 _SectionHeader(
                   title: 'ئاگادارکردنەوە',
@@ -143,8 +235,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       value: _prefs.enabled,
                       activeColor: AppColors.sunGold,
-                      onChanged: (v) =>
-                          setState(() => _prefs = _prefs.copyWith(enabled: v)),
+                      onChanged: (v) => setState(() {
+                        _prefs = _prefsFromCategories(
+                          categories: _selectedCategories,
+                          base: _prefs,
+                          enabledOverride: v,
+                        );
+                      }),
                     ),
                     if (_prefs.enabled) ...[
                       _Divider(isDark: isDark),
@@ -162,44 +259,80 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         iconColor: AppColors.forestGreen,
                         labelKu: 'جەژنەکان',
                         labelEn: 'Holidays',
-                        value: _prefs.holidays,
+                        value: _selectedCategories.contains(CategoryOption.holidays),
                         accentColor: AppColors.forestGreen,
                         isDark: isDark,
-                        onChanged: (v) =>
-                            setState(() => _prefs = _prefs.copyWith(holidays: v)),
+                        onChanged: (v) => setState(() {
+                          if (v) {
+                            _selectedCategories.add(CategoryOption.holidays);
+                          } else {
+                            _selectedCategories.remove(CategoryOption.holidays);
+                          }
+                          _prefs = _prefsFromCategories(
+                            categories: _selectedCategories,
+                            base: _prefs,
+                          );
+                        }),
                       ),
                       _NotifToggle(
                         icon: '✿',
                         iconColor: AppColors.kurdishRed,
                         labelKu: 'تراژیدیەکان',
                         labelEn: 'Tragic Events',
-                        value: _prefs.tragedies,
+                        value: _selectedCategories.contains(CategoryOption.tragedies),
                         accentColor: AppColors.kurdishRed,
                         isDark: isDark,
-                        onChanged: (v) =>
-                            setState(() => _prefs = _prefs.copyWith(tragedies: v)),
+                        onChanged: (v) => setState(() {
+                          if (v) {
+                            _selectedCategories.add(CategoryOption.tragedies);
+                          } else {
+                            _selectedCategories.remove(CategoryOption.tragedies);
+                          }
+                          _prefs = _prefsFromCategories(
+                            categories: _selectedCategories,
+                            base: _prefs,
+                          );
+                        }),
                       ),
                       _NotifToggle(
                         icon: '✦',
                         iconColor: AppColors.sunGoldDeep,
                         labelKu: 'ئەدیبان و شاعیرانە',
                         labelEn: 'Poets & Writers',
-                        value: _prefs.milestones,
+                        value: _selectedCategories.contains(CategoryOption.poetic),
                         accentColor: AppColors.sunGoldDeep,
                         isDark: isDark,
-                        onChanged: (v) =>
-                            setState(() => _prefs = _prefs.copyWith(milestones: v)),
+                        onChanged: (v) => setState(() {
+                          if (v) {
+                            _selectedCategories.add(CategoryOption.poetic);
+                          } else {
+                            _selectedCategories.remove(CategoryOption.poetic);
+                          }
+                          _prefs = _prefsFromCategories(
+                            categories: _selectedCategories,
+                            base: _prefs,
+                          );
+                        }),
                       ),
                       _NotifToggle(
                         icon: '◆',
                         iconColor: AppColors.zagrosEarth,
                         labelKu: 'کەلتووری',
                         labelEn: 'Cultural Events',
-                        value: _prefs.cultural,
+                        value: _selectedCategories.contains(CategoryOption.cultural),
                         accentColor: AppColors.zagrosEarth,
                         isDark: isDark,
-                        onChanged: (v) =>
-                            setState(() => _prefs = _prefs.copyWith(cultural: v)),
+                        onChanged: (v) => setState(() {
+                          if (v) {
+                            _selectedCategories.add(CategoryOption.cultural);
+                          } else {
+                            _selectedCategories.remove(CategoryOption.cultural);
+                          }
+                          _prefs = _prefsFromCategories(
+                            categories: _selectedCategories,
+                            base: _prefs,
+                          );
+                        }),
                       ),
                     ],
                   ],
@@ -265,7 +398,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _saveSettings() async {
-    await NotificationService.instance.savePrefs(_prefs);
+    final themeChoice = ref.read(themeChoiceProvider);
+    final onboardingPrefs = OnboardingPrefs(
+      categories: Set<CategoryOption>.from(_selectedCategories),
+      theme: themeChoice,
+    );
+    await OnboardingService().savePrefs(onboardingPrefs);
+
+    final syncedPrefs = _prefsFromCategories(
+      categories: _selectedCategories,
+      base: _prefs,
+    );
+    debugPrint(
+      'Settings save -> selectedCategories=${_selectedCategories.map((e) => e.name).toList()}, selectedTheme=${themeChoice.name}',
+    );
+    await NotificationService.instance.savePrefs(syncedPrefs);
+    await NotificationService.instance.scheduleOnThisDayNotifications();
+
+    if (mounted) {
+      setState(() => _prefs = syncedPrefs);
+    }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -486,6 +638,81 @@ class _TimePicker extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeOptionTile extends StatelessWidget {
+  final AppThemeChoice choice;
+  final bool selected;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ThemeOptionTile({
+    required this.choice,
+    required this.selected,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  static const Map<AppThemeChoice, String> _kuLabels = {
+    AppThemeChoice.darkRed: 'سوری تاریک',
+    AppThemeChoice.deepBlue: 'شینی قووڵ',
+    AppThemeChoice.green: 'سەوز',
+    AppThemeChoice.brown: 'قاوەیی',
+    AppThemeChoice.dynamic: 'گۆڕاو (ڕۆژانە)',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final color =
+        choice == AppThemeChoice.dynamic ? AppColors.sunGold : choice.seedColor;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? AppColors.sunGold : Colors.transparent,
+                  width: 2.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _kuLabels[choice] ?? choice.labelEn,
+                    style: AppTypography.textTheme.bodyMedium!.copyWith(
+                      color: isDark ? Colors.white : AppColors.inkDark,
+                      fontWeight:
+                          selected ? FontWeight.w700 : FontWeight.normal,
+                    ),
+                  ),
+                  Text(
+                    choice.descEn,
+                    style: AppTypography.textTheme.bodySmall!
+                        .copyWith(color: AppColors.inkLight),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check_circle_rounded,
+                  color: AppColors.sunGold, size: 20),
+          ],
         ),
       ),
     );

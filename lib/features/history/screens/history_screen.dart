@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/kurdish_painters.dart';
+import '../../../core/theme/kurdish_theme_extension.dart';
 import '../../../data/models/calendar_event.dart';
 import '../../../services/notification_service.dart';
 import '../../events/screens/event_detail_screen.dart';
@@ -12,6 +13,18 @@ class HistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<KurdishThemeExtension>();
+    final headerStart = Color.lerp(
+      scheme.primary,
+      isDark ? AppColors.charcoalBg : Colors.white,
+      isDark ? 0.25 : 0.15,
+    )!;
+    final headerEnd = Color.lerp(
+      scheme.primary,
+      isDark ? Colors.black : AppColors.forestGreen,
+      isDark ? 0.55 : 0.25,
+    )!;
     final events = List<CalendarEvent>.from(NotificationService.seedEventsForDemo)
       ..sort((a, b) => a.gregorianMonth.compareTo(b.gregorianMonth));
 
@@ -21,16 +34,18 @@ class HistoryScreen extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 120,
             pinned: true,
-            backgroundColor: isDark ? AppColors.charcoalBg : AppColors.forestGreen,
+            backgroundColor: scheme.primary,
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      gradient: isDark
-                          ? AppColors.headerGradientDark
-                          : AppColors.headerGradientLight,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [headerStart, headerEnd],
+                      ),
                     ),
                   ),
                   // Kilim border overlay
@@ -51,7 +66,7 @@ class HistoryScreen extends StatelessWidget {
             title: Text(
               'مێژووی کوردستان',
               style: AppTypography.textTheme.headlineMedium!
-                  .copyWith(color: Colors.white),
+                  .copyWith(color: ext?.headerText ?? Colors.white),
             ),
             centerTitle: false,
           ),

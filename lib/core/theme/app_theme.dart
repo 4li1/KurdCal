@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../data/models/onboarding_prefs.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
+import 'kurdish_theme_extension.dart';
 
 class AppTheme {
   AppTheme._();
@@ -76,6 +78,7 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.sunGold, width: 2),
         ),
       ),
+      extensions: const <ThemeExtension<dynamic>>[KurdishThemeExtension.yellow],
     );
   }
 
@@ -152,13 +155,17 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.sunGold, width: 2),
         ),
       ),
+      extensions: const <ThemeExtension<dynamic>>[KurdishThemeExtension.yellow],
     );
   }
 
-  /// Generates a Kurdish-inspired [ThemeData] seeded from [primaryColor].
+  /// Generates a Kurdish-inspired [ThemeData] seeded from [choice].
   /// Preserves the Kurdish design language (typography, surface colours)
-  /// while swapping the primary accent to the user's chosen colour.
-  static ThemeData fromSeed(Color primaryColor, {bool dark = true}) {
+  /// while swapping the primary accent to the user's chosen colour and
+  /// attaching the matching [KurdishThemeExtension] preset.
+  static ThemeData fromSeed(AppThemeChoice choice, {bool dark = true}) {
+    final primaryColor = choice.seedColor;
+    final ext = choice.themeExtension;
     final base = dark ? darkTheme : lightTheme;
     final scheme = ColorScheme.fromSeed(
       seedColor: primaryColor,
@@ -169,6 +176,19 @@ class AppTheme {
       // Preserve the hand-crafted Kurdish surface/background palette.
       surface: dark ? AppColors.charcoalSurface : AppColors.creamSurface,
     );
-    return base.copyWith(colorScheme: scheme);
+    final scaffoldBg = dark
+        ? Color.lerp(AppColors.charcoalBg, scheme.primary, 0.12)!
+        : Color.lerp(AppColors.creamBg, scheme.primary, 0.10)!;
+
+    return base.copyWith(
+      colorScheme: scheme,
+      scaffoldBackgroundColor: scaffoldBg,
+      cardTheme: base.cardTheme.copyWith(color: ext.surfaceColor),
+      bottomNavigationBarTheme: base.bottomNavigationBarTheme.copyWith(
+        backgroundColor: ext.surfaceColor,
+        selectedItemColor: ext.primaryAccent,
+      ),
+      extensions: <ThemeExtension<dynamic>>[ext],
+    );
   }
 }

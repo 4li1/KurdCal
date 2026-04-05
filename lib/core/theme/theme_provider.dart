@@ -28,10 +28,10 @@ Override initialThemeOverride(AppThemeChoice choice) =>
 /// Derived [ThemeData] providers consumed directly by [MaterialApp].
 final lightThemeProvider = Provider<ThemeData>((ref) {
   final choice = ref.watch(themeChoiceProvider);
-  return AppTheme.fromSeed(choice.seedColor, dark: false);
+  return AppTheme.fromSeed(choice, dark: false);
 });
 
 final darkThemeProvider = Provider<ThemeData>((ref) {
   final choice = ref.watch(themeChoiceProvider);
-  return AppTheme.fromSeed(choice.seedColor, dark: true);
+  return AppTheme.fromSeed(choice, dark: true);
 });

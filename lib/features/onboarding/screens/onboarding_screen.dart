@@ -44,6 +44,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _finish() async {
     setState(() => _isSaving = true);
 
+    final selectedCategories = _categories.map((e) => e.name).toList();
+    debugPrint(
+      'Onboarding save -> selectedCategories=$selectedCategories, selectedTheme=${_theme.name}',
+    );
+
+    // Apply immediately so UI updates without app restart.
+    ref.read(themeChoiceProvider.notifier).setTheme(_theme);
+
     final prefs = OnboardingPrefs(
       categories: Set.from(_categories),
       theme: _theme,
@@ -62,8 +70,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
     await NotificationService.instance.savePrefs(notifPrefs);
     await NotificationService.instance.scheduleOnThisDayNotifications();
-
-    ref.read(themeChoiceProvider.notifier).setTheme(_theme);
 
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(

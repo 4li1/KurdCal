@@ -212,11 +212,11 @@ class NotificationPrefs {
   final int notifMinute;  // 0-59
 
   const NotificationPrefs({
-    this.enabled = true,
-    this.holidays = true,
-    this.tragedies = true,
-    this.milestones = true,
-    this.cultural = true,
+    this.enabled = false,
+    this.holidays = false,
+    this.tragedies = false,
+    this.milestones = false,
+    this.cultural = false,
     this.notifHour = 9,
     this.notifMinute = 0,
   });

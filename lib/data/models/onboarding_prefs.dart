@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/kurdish_theme_extension.dart';
 
 /// All persisted choices from the first-launch onboarding flow.
 class OnboardingPrefs {
@@ -73,6 +74,15 @@ enum AppThemeChoice {
         AppThemeChoice.green => 'Fresh & natural',
         AppThemeChoice.brown => 'Warm & traditional',
         AppThemeChoice.dynamic => 'Changes each day',
+      };
+
+  /// The [KurdishThemeExtension] preset paired with this theme choice.
+  KurdishThemeExtension get themeExtension => switch (this) {
+        AppThemeChoice.darkRed  => KurdishThemeExtension.red,
+        AppThemeChoice.deepBlue => KurdishThemeExtension.blue,
+        AppThemeChoice.green    => KurdishThemeExtension.green,
+        AppThemeChoice.brown    => KurdishThemeExtension.brown,
+        AppThemeChoice.dynamic  => KurdishThemeExtension.yellow,
       };
 
   /// The primary seed color for this theme choice.

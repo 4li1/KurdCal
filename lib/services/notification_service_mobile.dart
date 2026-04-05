@@ -151,11 +151,11 @@ Future<NotificationPrefs> loadPrefs() async {
 Future<NotificationPrefs> _getPrefs() async {
   final sp = await SharedPreferences.getInstance();
   return NotificationPrefs(
-    enabled: sp.getBool(_keyEnabled) ?? true,
-    holidays: sp.getBool(_keyHolidays) ?? true,
-    tragedies: sp.getBool(_keyTragedies) ?? true,
-    milestones: sp.getBool(_keyMilestones) ?? true,
-    cultural: sp.getBool(_keyCultural) ?? true,
+    enabled: sp.getBool(_keyEnabled) ?? false,
+    holidays: sp.getBool(_keyHolidays) ?? false,
+    tragedies: sp.getBool(_keyTragedies) ?? false,
+    milestones: sp.getBool(_keyMilestones) ?? false,
+    cultural: sp.getBool(_keyCultural) ?? false,
     notifHour: sp.getInt(_keyHour) ?? 9,
     notifMinute: sp.getInt(_keyMinute) ?? 0,
   );
